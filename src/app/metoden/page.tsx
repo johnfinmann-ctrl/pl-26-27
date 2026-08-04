@@ -1,7 +1,33 @@
+import { ModelStatusBadge } from "@/components/ModelStatusBadge";
+
 export default function MetodenPage() {
   return (
     <section className="px-4 py-6 space-y-6">
       <h1 className="text-xl font-bold">Metoden</h1>
+
+      <div className="rounded-xl bg-elp-card p-4">
+        <h2 className="font-semibold mb-3">Hvad påvirker prognosen i V1?</h2>
+        <ul className="space-y-2 text-sm mb-4">
+          <FactorRow label="Elo-rating" status="active" />
+          <FactorRow label="Hjemmebanefordel" status="active" />
+          <FactorRow label="Poisson-målmodel" status="active" />
+          <FactorRow label="Monte Carlo-sæsonsimulering" status="active" />
+          <FactorRow label="Syntetisk kampprogram" status="active" />
+        </ul>
+        <p className="text-xs text-elp-muted mb-2">
+          Følgende vises kun som forklarende/illustrative oplysninger og
+          påvirker endnu ikke selve kampberegningen:
+        </p>
+        <ul className="space-y-2 text-sm">
+          <FactorRow label="VM-belastning" status="illustrative" />
+          <FactorRow label="Hviledage og juleprogram" status="illustrative" />
+          <FactorRow label="Skader og øvrige fravær" status="illustrative" />
+          <FactorRow label="Røde kort" status="illustrative" />
+          <FactorRow label="Karantæner" status="illustrative" />
+          <FactorRow label="VAR" status="illustrative" />
+          <FactorRow label="Programstyrke (visning)" status="illustrative" />
+        </ul>
+      </div>
 
       <Explainer title="Elo-rating">
         Hvert hold har et Elo-tal, der stiger og falder efter resultater.
@@ -43,10 +69,19 @@ export default function MetodenPage() {
         valideret mod historiske data.
       </Explainer>
 
+      <Explainer title="Kort, karantæner og VAR">
+        Røde kort, karantæner og VAR vises udelukkende som informativ
+        baggrund i V1 (§13/§14). Der laves ingen liveprognose efter et rødt
+        kort, ingen forudsigelse af VAR-kendelser, og ingen vurdering af
+        dommere som partiske. VAR er ikke en selvstændig numerisk faktor og
+        gives aldrig som en vilkårlig holdbonus eller -straf.
+      </Explainer>
+
       <Explainer title="Usikkerhed">
         Alle tal i appen er sandsynligheder og statistiske skøn – aldrig
         sikre resultater. Pointintervaller (10.-90. percentil) viser, hvor
-        stor spredningen typisk er mellem simuleringerne.
+        stor spredningen typisk er mellem simuleringerne. Prognoserne må
+        ikke bruges til betting eller økonomiske beslutninger.
       </Explainer>
 
       <Explainer title="Demo kontra produktionsdata">
@@ -56,6 +91,21 @@ export default function MetodenPage() {
         ændres beregningsmotoren ikke, kun datakilden.
       </Explainer>
     </section>
+  );
+}
+
+function FactorRow({
+  label,
+  status,
+}: {
+  label: string;
+  status: "active" | "illustrative";
+}) {
+  return (
+    <li className="flex items-center justify-between gap-3">
+      <span>{label}</span>
+      <ModelStatusBadge status={status} />
+    </li>
   );
 }
 

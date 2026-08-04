@@ -3,28 +3,29 @@
 import { useMemo, useState } from "react";
 import { useLeagueData } from "@/components/LeagueDataContext";
 import { LoadingState, ErrorState } from "@/components/StatusStates";
-import { TeamBadge } from "@/components/TeamBadge";
-import { simulateSeason } from "@/lib/model/simulation/simulateSeason";
+import { useSimulationRunner } from "@/lib/simulation/useSimulationRunner";
 import { pct } from "@/lib/format";
 import type { TeamSeasonOutcome } from "@/types/domain";
 
 const SCENARIO_SIMULATIONS = 3000;
 
 export default function SimulatorPage() {
-  const { view, loading, error, retry } = useLeagueData();
+  const { view, loading, error, retry, statusLabel } = useLeagueData();
   const [teamId, setTeamId] = useState<string | null>(null);
   const [fixtureId, setFixtureId] = useState<string | null>(null);
   const [homeGoals, setHomeGoals] = useState(1);
   const [awayGoals, setAwayGoals] = useState(1);
   const [scenarioResult, setScenarioResult] = useState<TeamSeasonOutcome[] | null>(null);
   const [computing, setComputing] = useState(false);
+  const [scenarioError, setScenarioError] = useState<string | null>(null);
+  const { run, supportsWorker } = useSimulationRunner();
 
   const teamsById = useMemo(() => {
     if (!view) return new Map();
     return new Map(view.snapshot.teams.map((t) => [t.id, t]));
   }, [view]);
 
-  if (loading) return <LoadingState label="Indlæser simulator …" />;
+  if (loading) return <LoadingState label={statusLabel ?? "Indlæser simulator …"} />;
   if (error) return <ErrorState message={error} onRetry={retry} />;
   if (!view) return null;
 
@@ -44,25 +45,37 @@ export default function SimulatorPage() {
   function runScenario() {
     if (!currentFixture) return;
     setComputing(true);
-    // Kør beregningen asynkront på næste tick, så UI kan vise "beregner"
-    setTimeout(() => {
-      const overrides = new Map([[currentFixture.id, { homeGoals, awayGoals }]]);
-      const result = simulateSeason({
-        teams: leagueView.snapshot.teams,
-        allFixtures: leagueView.snapshot.fixtures,
-        playedResults: new Map(),
-        eloByTeam: leagueView.eloByTeam,
-        numberOfSimulations: SCENARIO_SIMULATIONS,
-        seed: null,
-        overrides,
+    setScenarioError(null);
+
+    const overrides = new Map([[currentFixture.id, { homeGoals, awayGoals }]]);
+
+    run({
+      teams: leagueView.snapshot.teams,
+      allFixtures: leagueView.snapshot.fixtures,
+      playedResults: new Map(),
+      eloByTeam: leagueView.eloByTeam,
+      numberOfSimulations: SCENARIO_SIMULATIONS,
+      seed: null,
+      overrides,
+    })
+      .then((result) => {
+        setScenarioResult(result.outcomes);
+      })
+      .catch((err) => {
+        setScenarioError(
+          err instanceof Error
+            ? err.message
+            : "Scenariet kunne ikke genberegnes."
+        );
+      })
+      .finally(() => {
+        setComputing(false);
       });
-      setScenarioResult(result.outcomes);
-      setComputing(false);
-    }, 10);
   }
 
   function resetScenario() {
     setScenarioResult(null);
+    setScenarioError(null);
   }
 
   return (
@@ -135,6 +148,14 @@ export default function SimulatorPage() {
         </div>
       )}
 
+      <p className="text-xs text-elp-muted mb-2" aria-live="polite">
+        {computing
+          ? supportsWorker
+            ? "Genberegner i baggrunden (Web Worker) – UI'et forbliver responsivt."
+            : "Genberegner … (denne enhed understøtter ikke Web Worker, så beregningen kører på hovedtråden)"
+          : null}
+      </p>
+
       <div className="flex gap-3 mb-6">
         <button
           onClick={runScenario}
@@ -150,6 +171,12 @@ export default function SimulatorPage() {
           Nulstil scenarie
         </button>
       </div>
+
+      {scenarioError && (
+        <p role="alert" className="text-sm text-elp-danger mb-4">
+          {scenarioError}
+        </p>
+      )}
 
       {baseOutcome && (
         <div className="rounded-xl bg-elp-card p-4 space-y-3">

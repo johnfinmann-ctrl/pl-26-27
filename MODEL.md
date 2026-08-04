@@ -3,6 +3,27 @@
 **Alle parametre nævnt herunder er foreløbige og IKKE backtestet mod
 historiske data.** De ligger samlet i `src/lib/config/model-config.ts`.
 
+## Hvad påvirker prognosen i V1? (kort oversigt)
+
+| Faktor | Status |
+|---|---|
+| Elo-rating | Indgår i modellen |
+| Hjemmebanefordel | Indgår i modellen |
+| Poisson-målmodel | Indgår i modellen |
+| Monte Carlo-sæsonsimulering | Indgår i modellen |
+| Syntetisk kampprogram | Indgår i modellen |
+| Programstyrke (visning) | Illustrativ – påvirker ikke prognosen endnu |
+| VM-belastning | Illustrativ – påvirker ikke prognosen endnu |
+| Hviledage og juleprogram | Illustrativ – påvirker ikke prognosen endnu |
+| Skader og øvrige fravær | Illustrativ – påvirker ikke prognosen endnu |
+| Røde kort | Illustrativ – påvirker ikke prognosen endnu |
+| Karantæner | Illustrativ – påvirker ikke prognosen endnu |
+| VAR | Illustrativ – påvirker ikke prognosen endnu |
+
+Denne tabel afspejles direkte i appens Metoden-side og som badges på
+Overblik-, Program- og Hold-siderne, så det aldrig fremstår som om en
+illustrativ faktor allerede indgår i beregningen.
+
 ## Elo-rating (`src/lib/model/elo/elo.ts`)
 
 | Parameter | V1-værdi | Note |
@@ -48,6 +69,14 @@ uden at risikere at gøre fundamentet ustabilt (jf. §8 i specifikationen).
 - **Fastfrosset rating**: Elo opdateres ikke undervejs i den enkelte
   simulering (`simulationConfig.useFrozenRatings = true`). Dynamisk Elo er
   forberedt i arkitekturen, men ikke aktiveret, da det kræver backtesting.
+- **Web Worker**: Selve simuleringen (både den interaktive 10.000-kørsel
+  og "Hvad nu hvis?"-scenarierne) kører i en Web Worker
+  (`public/workers/simulation-worker.js`, kildekode i
+  `src/workers/simulation.worker.ts`), så UI'et ikke blokeres. Der er en
+  testet, sikker fallback til hovedtråden, hvis Web Worker ikke er
+  tilgængelig. Se `tests/workerSimulation.test.ts` og
+  `tests/useSimulationRunner.test.tsx` for verifikation af, at resultatet
+  er identisk uanset hvor beregningen kører.
 
 ## Programscore (`src/lib/model/schedule/scheduleScore.ts`)
 

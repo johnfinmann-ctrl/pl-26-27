@@ -4,17 +4,18 @@ import { useMemo } from "react";
 import { useLeagueData } from "@/components/LeagueDataContext";
 import { LoadingState, ErrorState } from "@/components/StatusStates";
 import { TeamBadge } from "@/components/TeamBadge";
+import { DataStatusBadge } from "@/components/DataStatusBadge";
 import { pct } from "@/lib/format";
 
 export default function NaesteRundePage() {
-  const { view, loading, error, retry } = useLeagueData();
+  const { view, loading, error, retry, statusLabel } = useLeagueData();
 
   const teamsById = useMemo(() => {
     if (!view) return new Map();
     return new Map(view.snapshot.teams.map((t) => [t.id, t]));
   }, [view]);
 
-  if (loading) return <LoadingState label="Indlæser næste runde …" />;
+  if (loading) return <LoadingState label={statusLabel ?? "Indlæser næste runde …"} />;
   if (error) return <ErrorState message={error} onRetry={retry} />;
   if (!view) return null;
 
@@ -25,7 +26,15 @@ export default function NaesteRundePage() {
 
   return (
     <section className="px-4 py-6">
-      <h1 className="text-xl font-bold mb-1">Næste runde</h1>
+      <div className="flex items-center justify-between mb-1">
+        <h1 className="text-xl font-bold">Næste runde</h1>
+        <DataStatusBadge status={view.snapshot.status} lastUpdated={view.snapshot.lastUpdated} />
+      </div>
+      <p className="text-xs text-elp-muted mb-4">
+        Kampprogrammet er syntetisk testdata og er ikke Premier Leagues
+        officielle kampprogram. Må ikke bruges til betting eller
+        økonomiske beslutninger.
+      </p>
       <p className="text-sm text-elp-muted mb-4">Runde {round} · 10 kampe</p>
 
       <ul className="space-y-3">

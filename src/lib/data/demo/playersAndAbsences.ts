@@ -18,7 +18,7 @@ export function generateDemoPlayers(teams: Team[]): Player[] {
   const rng = createRng(1234);
   const players: Player[] = [];
 
-  teams.forEach((team, ti) => {
+  teams.forEach((team) => {
     positions.forEach((pos, pi) => {
       const importance = Math.round((0.4 + rng() * 0.55) * 100) / 100;
       players.push({

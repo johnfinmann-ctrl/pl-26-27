@@ -7,7 +7,7 @@
  */
 
 export const MODEL_VERSION_ID = "demo-v1";
-export const APP_VERSION = "0.1.0-demo";
+export const APP_VERSION = "0.2.0-demo";
 
 export const eloConfig = {
   modelVersionId: MODEL_VERSION_ID,
@@ -77,7 +77,7 @@ export const absenceConfig = {
 } as const;
 
 export const dataStatusLabels = {
-  demo: "Demo",
+  demo: "Demo – syntetiske data",
   imported: "Importeret",
   "api-updated": "API-opdateret",
   stale: "Forældet",

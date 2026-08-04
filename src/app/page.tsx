@@ -6,11 +6,12 @@ import { useLeagueData } from "@/components/LeagueDataContext";
 import { LoadingState, ErrorState } from "@/components/StatusStates";
 import { TeamBadge } from "@/components/TeamBadge";
 import { DataStatusBadge } from "@/components/DataStatusBadge";
+import { ModelStatusBadge } from "@/components/ModelStatusBadge";
 import { useFavoriteTeam } from "@/hooks/useFavoriteTeam";
 import { pct, pointsRange } from "@/lib/format";
 
 export default function OverblikPage() {
-  const { view, loading, error, retry } = useLeagueData();
+  const { view, loading, error, retry, statusLabel } = useLeagueData();
   const { favoriteTeamId, setFavoriteTeamId, hydrated } = useFavoriteTeam();
 
   const teamsById = useMemo(() => {
@@ -18,7 +19,7 @@ export default function OverblikPage() {
     return new Map(view.snapshot.teams.map((t) => [t.id, t]));
   }, [view]);
 
-  if (loading) return <LoadingState label="Indlæser overblik …" />;
+  if (loading) return <LoadingState label={statusLabel ?? "Indlæser overblik …"} />;
   if (error) return <ErrorState message={error} onRetry={retry} />;
   if (!view) return null;
 
@@ -91,9 +92,12 @@ export default function OverblikPage() {
 
       {nextFixture && nextProb && (
         <div className="rounded-xl bg-elp-card p-4">
-          <h2 className="text-sm font-semibold text-elp-muted mb-2">
-            Næste kamp
-          </h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-semibold text-elp-muted">
+              Næste kamp
+            </h2>
+            <ModelStatusBadge status="active" />
+          </div>
           <div className="flex items-center justify-between mb-3">
             <TeamName teamsById={teamsById} id={nextFixture.homeTeamId} />
             <span className="text-elp-muted text-sm">vs</span>
@@ -104,14 +108,22 @@ export default function OverblikPage() {
             <ProbBox label="X" value={nextProb.draw} />
             <ProbBox label="U" value={nextProb.awayWin} />
           </div>
+          <p className="text-xs text-elp-muted mt-2">
+            Syntetisk testkamp – ikke Premier Leagues officielle
+            kampprogram. Ikke egnet til betting eller økonomiske
+            beslutninger.
+          </p>
         </div>
       )}
 
       {favoriteOutcome && (
         <div className="rounded-xl bg-elp-card p-4 space-y-2">
-          <h2 className="text-sm font-semibold text-elp-muted">
-            Forventet slutplacering
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-elp-muted">
+              Forventet slutplacering
+            </h2>
+            <ModelStatusBadge status="active" />
+          </div>
           <p className="text-2xl font-bold">{expectedPosition}. plads (mest sandsynlig)</p>
           <p className="text-sm text-elp-muted">
             Forventet pointinterval: {pointsRange(favoriteOutcome.p10Points, favoriteOutcome.p90Points)}

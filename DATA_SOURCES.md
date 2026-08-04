@@ -28,7 +28,7 @@ produktionsverificerede data.
 | Kilde | Status | Beskrivelse |
 |---|---|---|
 | `JsonDataProvider` | Klar til brug | Indlæser og validerer et `LeagueSnapshot`-kompatibelt JSON-objekt, fx en manuelt vedligeholdt lokal fil (bruges til fravær, jf. §12). |
-| `ApiFootballProvider` | Forberedt, server-only stub | Kræver `API_FOOTBALL_KEY` (kun server-side, se `.env.example`). Kaster i øjeblikket en fejl, hvis den kaldes, fordi den ikke er implementeret endnu. |
+| `ApiFootballProvider` | Forberedt, server-only stub | Kræver `API_FOOTBALL_KEY` (kun server-side, aldrig `NEXT_PUBLIC_*`, se `.env.example`). Kaster i øjeblikket en fejl, hvis den kaldes, fordi den ikke er implementeret endnu. Se den konkrete 7-punkts TODO-liste i selve filens kommentar for, hvad der mangler for at koble officielt kampprogram, resultater, spillerfravær og karantæner på. |
 | `SupabaseDataProvider` | Forberedt stub | Ikke tilkoblet noget Supabase-projekt i V1. |
 
 ## Sikkerhed omkring API-nøgler

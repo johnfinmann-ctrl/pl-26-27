@@ -4,24 +4,34 @@ import {
   expectedGoalsFromElo,
   scorelineDistribution,
 } from "@/lib/model/goals/poisson";
-import { simulateSeason } from "@/lib/model/simulation/simulateSeason";
+import {
+  simulateSeason,
+  type SimulateSeasonInput,
+} from "@/lib/model/simulation/simulateSeason";
 import { simulationConfig } from "@/lib/config/model-config";
 import { computeScheduleScores } from "@/lib/model/schedule/scheduleScore";
 import { computeFatigueScore } from "@/lib/model/fatigue/fatigueScore";
 import { computeTeamWorldCupLoad } from "@/lib/model/fatigue/worldCupLoad";
 import { computeAbsenceScore } from "@/lib/model/absence/absenceScore";
-import type { MatchProbability, ScheduleWindow, TeamSeasonOutcome } from "@/types/domain";
+import type {
+  MatchProbability,
+  ScheduleWindow,
+  TeamSeasonOutcome,
+} from "@/types/domain";
 
-export interface LeagueView {
+export interface LeagueViewBase {
   snapshot: LeagueSnapshot;
   eloByTeam: Map<string, number>;
   currentRound: number;
   nextRoundProbabilities: MatchProbability[];
-  seasonSimulation: TeamSeasonOutcome[];
   scheduleScores: Record<ScheduleWindow, ReturnType<typeof computeScheduleScores>>;
   fatigueByTeam: Map<string, ReturnType<typeof computeFatigueScore>>;
   worldCupLoadByTeam: Map<string, { teamScore: number; label: string }>;
   absenceScoreByTeam: Map<string, { score: number; affectsMatchProbability: boolean }>;
+}
+
+export interface LeagueView extends LeagueViewBase {
+  seasonSimulation: TeamSeasonOutcome[];
 }
 
 const WINDOWS: ScheduleWindow[] = [
@@ -34,14 +44,15 @@ const WINDOWS: ScheduleWindow[] = [
 ];
 
 /**
- * Bygger den samlede visningsmodel til UI ud fra et data-snapshot. Denne
- * funktion er ren TypeScript og kan køre både i browseren og server-side.
+ * Bygger alle de HURTIGE dele af visningsmodellen (Elo-udgangspunkter,
+ * næste rundes 1-X-2-sandsynligheder, programscore, hvile-/VM-/fraværs-
+ * score). Indeholder bevidst IKKE Monte Carlo-sæsonsimuleringen (§9), som
+ * er den tunge beregning og derfor køres separat - typisk i en Web Worker
+ * (se src/lib/simulation/useSimulationRunner.ts) - så UI'et kan vise
+ * resten af siden, mens simuleringen kører i baggrunden.
  */
-export function buildLeagueView(
-  snapshot: LeagueSnapshot,
-  options: { numberOfSimulations?: number; seed?: number | null } = {}
-): LeagueView {
-  const { teams, fixtures, players, absences, worldCupLoads } = snapshot;
+export function buildLeagueViewBase(snapshot: LeagueSnapshot): LeagueViewBase {
+  const { teams, fixtures, absences, worldCupLoads } = snapshot;
 
   const eloByTeam = new Map(
     teams.map((t) => [t.id, startingRatingFor(t.isPromoted)])
@@ -71,16 +82,6 @@ export function buildLeagueView(
     };
   });
 
-  const simulation = simulateSeason({
-    teams,
-    allFixtures: fixtures,
-    playedResults: new Map(),
-    eloByTeam,
-    numberOfSimulations:
-      options.numberOfSimulations ?? simulationConfig.interactiveSimulations,
-    seed: options.seed ?? null,
-  });
-
   const scheduleScores = Object.fromEntries(
     WINDOWS.map((w) => [
       w,
@@ -106,17 +107,53 @@ export function buildLeagueView(
     ])
   );
 
-  void players;
-
   return {
     snapshot,
     eloByTeam,
     currentRound,
     nextRoundProbabilities,
-    seasonSimulation: simulation.outcomes,
     scheduleScores,
     fatigueByTeam,
     worldCupLoadByTeam,
     absenceScoreByTeam,
+  };
+}
+
+/**
+ * Bygger input til simulateSeason (og dermed til Web Worker'en) ud fra en
+ * allerede-beregnet LeagueViewBase.
+ */
+export function buildSimulationInput(
+  base: LeagueViewBase,
+  options: { numberOfSimulations?: number; seed?: number | null } = {}
+): SimulateSeasonInput {
+  return {
+    teams: base.snapshot.teams,
+    allFixtures: base.snapshot.fixtures,
+    playedResults: new Map(),
+    eloByTeam: base.eloByTeam,
+    numberOfSimulations:
+      options.numberOfSimulations ?? simulationConfig.interactiveSimulations,
+    seed: options.seed ?? null,
+  };
+}
+
+/**
+ * Bekvemmelighedsfunktion, der bygger HELE visningsmodellen synkront,
+ * inklusive sæsonsimuleringen på samme tråd. Bruges i tests, CLI-scripts
+ * og som fallback uden for browserkontekst. UI'et i browseren bør i
+ * stedet bruge buildLeagueViewBase + useSimulationRunner, så simuleringen
+ * ikke blokerer hovedtråden.
+ */
+export function buildLeagueView(
+  snapshot: LeagueSnapshot,
+  options: { numberOfSimulations?: number; seed?: number | null } = {}
+): LeagueView {
+  const base = buildLeagueViewBase(snapshot);
+  const simulation = simulateSeason(buildSimulationInput(base, options));
+
+  return {
+    ...base,
+    seasonSimulation: simulation.outcomes,
   };
 }

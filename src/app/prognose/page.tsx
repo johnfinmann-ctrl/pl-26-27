@@ -4,12 +4,14 @@ import { useMemo, useState } from "react";
 import { useLeagueData } from "@/components/LeagueDataContext";
 import { LoadingState, ErrorState } from "@/components/StatusStates";
 import { TeamBadge } from "@/components/TeamBadge";
+import { DataStatusBadge } from "@/components/DataStatusBadge";
+import { ModelStatusBadge } from "@/components/ModelStatusBadge";
 import { pct } from "@/lib/format";
 
 type SortKey = "meanPoints" | "titleProbability" | "relegationProbability";
 
 export default function PrognosePage() {
-  const { view, loading, error, retry } = useLeagueData();
+  const { view, loading, error, retry, statusLabel } = useLeagueData();
   const [sortKey, setSortKey] = useState<SortKey>("meanPoints");
 
   const teamsById = useMemo(() => {
@@ -17,7 +19,7 @@ export default function PrognosePage() {
     return new Map(view.snapshot.teams.map((t) => [t.id, t]));
   }, [view]);
 
-  if (loading) return <LoadingState label="Beregner prognose …" />;
+  if (loading) return <LoadingState label={statusLabel ?? "Beregner prognose …"} />;
   if (error) return <ErrorState message={error} onRetry={retry} />;
   if (!view) return null;
 
@@ -30,9 +32,16 @@ export default function PrognosePage() {
 
   return (
     <section className="px-4 py-6">
-      <h1 className="text-xl font-bold mb-1">Prognose</h1>
+      <div className="flex items-center justify-between mb-1">
+        <h1 className="text-xl font-bold">Prognose</h1>
+        <DataStatusBadge status={view.snapshot.status} lastUpdated={view.snapshot.lastUpdated} />
+      </div>
+      <div className="mb-3">
+        <ModelStatusBadge status="active" />
+      </div>
       <p className="text-sm text-elp-muted mb-4">
         Forventet tabel baseret på {view.snapshot.status === "demo" ? "10.000 simuleringer af demo-data" : "10.000 simuleringer"}.
+        Ikke egnet til betting eller økonomiske beslutninger.
       </p>
 
       <label className="text-xs text-elp-muted mb-2 block">
